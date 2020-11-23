@@ -1,4 +1,5 @@
-use super::graph::{EdgeArrow, Graph};
+use super::graph::Graph;
+use crate::graph::EdgeArrow::*;
 
 pub type ParseResult = (Graph, usize);
 
@@ -18,29 +19,29 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
                 break;
             }
             Some(c) if c.is_alphanumeric() => {
-                graph = graph.add_edge(final_node, EdgeArrow::Char(c), final_node + 1);
+                graph = graph.add_edge(final_node, Char(c), final_node + 1);
                 graph.final_node += 1;
                 previous_node = final_node;
             }
             Some('.') => {
-                graph = graph.add_edge(final_node, EdgeArrow::Dot, final_node + 1);
+                graph = graph.add_edge(final_node, Dot, final_node + 1);
                 graph.final_node += 1;
                 previous_node = final_node;
             }
             Some('^') => {
-                graph = graph.add_edge(final_node, EdgeArrow::LineStart, final_node + 1);
+                graph = graph.add_edge(final_node, LineStart, final_node + 1);
                 graph.final_node += 1;
                 previous_node = final_node;
             }
             Some('$') => {
-                graph = graph.add_edge(final_node, EdgeArrow::LineEnd, final_node + 1);
+                graph = graph.add_edge(final_node, LineEnd, final_node + 1);
                 graph.final_node += 1;
                 previous_node = final_node;
             }
             Some('\\') => match pattern.chars().nth(i + 1) {
                 None => return Err("escape character at EOL".to_string()),
                 Some(c) if ['\\', '+', '*', '(', ')', '[', ']', '.', '?'].contains(&c) => {
-                    graph = graph.add_edge(final_node, EdgeArrow::Char(c), final_node + 1);
+                    graph = graph.add_edge(final_node, Char(c), final_node + 1);
                     graph.final_node += 1;
                     previous_node = final_node;
                     step += 1;
@@ -54,14 +55,14 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
                 previous_node = 0;
             }
             Some('?') => {
-                graph = graph.add_edge(previous_node, EdgeArrow::Epsilon, final_node);
+                graph = graph.add_edge(previous_node, Epsilon, final_node);
             }
             Some('+') => {
-                graph = graph.add_edge(final_node, EdgeArrow::Epsilon, previous_node);
+                graph = graph.add_edge(final_node, Epsilon, previous_node);
             }
             Some('*') => {
-                graph = graph.add_edge(previous_node, EdgeArrow::Epsilon, final_node);
-                graph = graph.add_edge(final_node, EdgeArrow::Epsilon, previous_node);
+                graph = graph.add_edge(previous_node, Epsilon, final_node);
+                graph = graph.add_edge(final_node, Epsilon, previous_node);
             }
             Some('(') => {
                 let inner = parse(&pattern[i + 1..], Some(')'))?;
@@ -76,8 +77,7 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
                         None => return Err("Unexpected EOL".to_string()),
                         Some(']') => break,
                         Some(option) => {
-                            graph =
-                                graph.add_edge(final_node, EdgeArrow::Char(option), final_node + 1);
+                            graph = graph.add_edge(final_node, Char(option), final_node + 1);
                             j += 1;
                         }
                     }

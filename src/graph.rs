@@ -1,6 +1,15 @@
 use std::collections::HashMap;
 use std::fmt;
 
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum EdgeArrow {
+    Epsilon,
+    Char(char),
+    Dot,
+    LineStart,
+    LineEnd,
+}
+
 #[derive(Clone, PartialEq, Eq)]
 /// Basic domain-specific implementation of a graph.
 /// It is assumed that there is only one Initial node (at index 0) and one Final node.
@@ -131,15 +140,6 @@ struct Edge {
     pub to: Node,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub enum EdgeArrow {
-    Epsilon,
-    Char(char),
-    Dot,
-    LineStart,
-    LineEnd,
-}
-
 impl fmt::Debug for Edge {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "-{:?}-> {}", self.ch, self.to)
@@ -151,25 +151,26 @@ type Node = usize;
 #[cfg(test)]
 mod test {
     use super::Graph;
+    use crate::graph::EdgeArrow::*;
     use std::collections::HashMap;
 
     #[test]
     fn add_edge() {
         let mut g = Graph::new(2);
-        g = g.add_edge(0, super::EdgeArrow::Char('a'), 1);
+        g = g.add_edge(0, Char('a'), 1);
         assert_eq!(g.edges, hash(vec![(0, vec![edge('a', 1)])]));
-        g = g.add_edge(0, super::EdgeArrow::Char('b'), 2);
+        g = g.add_edge(0, Char('b'), 2);
         assert_eq!(g.edges, hash(vec![(0, vec![edge('a', 1), edge('b', 2)])]));
     }
 
     #[test]
     fn test_concat() {
         let g1 = Graph::new(2)
-            .add_edge(0, super::EdgeArrow::Char('a'), 1)
-            .add_edge(1, super::EdgeArrow::Char('b'), 2);
+            .add_edge(0, Char('a'), 1)
+            .add_edge(1, Char('b'), 2);
         let g2 = Graph::new(2)
-            .add_edge(0, super::EdgeArrow::Char('c'), 1)
-            .add_edge(1, super::EdgeArrow::Char('d'), 2);
+            .add_edge(0, Char('c'), 1)
+            .add_edge(1, Char('d'), 2);
 
         let expected = Graph {
             node_count: 5,
@@ -187,12 +188,12 @@ mod test {
     #[test]
     fn test_insert() {
         let g1 = Graph::new(3)
-            .add_edge(0, super::EdgeArrow::Char('a'), 1)
-            .add_edge(1, super::EdgeArrow::Char('b'), 2)
-            .add_edge(2, super::EdgeArrow::Char('c'), 3);
+            .add_edge(0, Char('a'), 1)
+            .add_edge(1, Char('b'), 2)
+            .add_edge(2, Char('c'), 3);
         let g2 = Graph::new(2)
-            .add_edge(0, super::EdgeArrow::Char('d'), 1)
-            .add_edge(1, super::EdgeArrow::Char('e'), 2);
+            .add_edge(0, Char('d'), 1)
+            .add_edge(1, Char('e'), 2);
 
         let expected = Graph {
             node_count: 6,
@@ -211,14 +212,14 @@ mod test {
     #[test]
     fn test_attach_parallel() {
         let g1 = Graph::new(4)
-            .add_edge(0, super::EdgeArrow::Char('a'), 1)
-            .add_edge(1, super::EdgeArrow::Char('b'), 2)
-            .add_edge(2, super::EdgeArrow::Char('c'), 3)
-            .add_edge(3, super::EdgeArrow::Char('d'), 4);
+            .add_edge(0, Char('a'), 1)
+            .add_edge(1, Char('b'), 2)
+            .add_edge(2, Char('c'), 3)
+            .add_edge(3, Char('d'), 4);
         let g2 = Graph::new(3)
-            .add_edge(0, super::EdgeArrow::Char('e'), 1)
-            .add_edge(1, super::EdgeArrow::Char('f'), 2)
-            .add_edge(2, super::EdgeArrow::Char('g'), 3);
+            .add_edge(0, Char('e'), 1)
+            .add_edge(1, Char('f'), 2)
+            .add_edge(2, Char('g'), 3);
 
         let expected = Graph {
             node_count: 7,
@@ -236,10 +237,7 @@ mod test {
     }
 
     fn edge(ch: char, to: usize) -> super::Edge {
-        super::Edge {
-            ch: super::EdgeArrow::Char(ch),
-            to,
-        }
+        super::Edge { ch: Char(ch), to }
     }
 
     fn hash(entries: Vec<(usize, Vec<super::Edge>)>) -> HashMap<usize, Vec<super::Edge>> {
