@@ -22,6 +22,21 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
                 graph.final_node += 1;
                 previous_node = final_node;
             }
+            Some('.') => {
+                graph = graph.add_edge(final_node, EdgeArrow::Dot, final_node + 1);
+                graph.final_node += 1;
+                previous_node = final_node;
+            }
+            Some('^') => {
+                graph = graph.add_edge(final_node, EdgeArrow::LineStart, final_node + 1);
+                graph.final_node += 1;
+                previous_node = final_node;
+            }
+            Some('$') => {
+                graph = graph.add_edge(final_node, EdgeArrow::LineEnd, final_node + 1);
+                graph.final_node += 1;
+                previous_node = final_node;
+            }
             Some('\\') => match pattern.chars().nth(i + 1) {
                 None => return Err("escape character at EOL".to_string()),
                 Some(c) if ['\\', '+', '*', '(', ')', '[', ']', '.', '?'].contains(&c) => {

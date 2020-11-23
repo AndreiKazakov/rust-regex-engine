@@ -136,6 +136,8 @@ pub enum EdgeArrow {
     Epsilon,
     Char(char),
     Dot,
+    LineStart,
+    LineEnd,
 }
 
 impl fmt::Debug for Edge {
