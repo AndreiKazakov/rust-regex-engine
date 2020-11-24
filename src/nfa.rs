@@ -94,3 +94,30 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
 
     Ok((graph, i))
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn parse_test() {
+        let graph = Graph::new(3)
+            .add_edge(1, Char('b'), 2)
+            .add_edge(1, Char('c'), 2)
+            .add_edge(1, Char('d'), 2)
+            .add_edge(2, Epsilon, 1)
+            .add_edge(2, Char('e'), 3)
+            .add_edge(5, Char('\\'), 3)
+            .add_edge(4, Epsilon, 0)
+            .add_edge(4, Dot, 5)
+            .add_edge(0, Char('a'), 1)
+            .add_edge(0, Char('q'), 4)
+            .add_edge(0, Epsilon, 4)
+            .add_edge(0, Epsilon, 3);
+
+        match parse(r"a[bcd]+e|(q*.\\)?", None) {
+            Err(e) => panic!("Failed to parse: {}", e),
+            Ok(res) => assert_eq!(res, (graph, 17)),
+        }
+    }
+}
