@@ -1,25 +1,16 @@
 use std::collections::HashMap;
 use std::fmt;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub enum EdgeArrow {
-    Epsilon,
-    Char(char),
-    Dot,
-    LineStart,
-    LineEnd,
-}
-
 #[derive(Clone, PartialEq, Eq)]
 /// Basic domain-specific implementation of a graph.
 /// It is assumed that there is only one Initial node (at index 0) and one Final node.
-pub struct Graph {
-    edges: HashMap<Node, Vec<Edge>>,
+pub struct Graph<Arrow> {
+    edges: HashMap<Node, Vec<Edge<Arrow>>>,
     node_count: usize,
     pub final_node: usize,
 }
 
-impl Graph {
+impl<Arrow> Graph<Arrow> {
     pub fn new(final_node: Node) -> Self {
         Self {
             edges: HashMap::new(),
@@ -28,7 +19,7 @@ impl Graph {
         }
     }
 
-    pub fn add_edge(mut self, from: Node, ch: EdgeArrow, to: Node) -> Self {
+    pub fn add_edge(mut self, from: Node, ch: Arrow, to: Node) -> Self {
         self.edges
             .entry(from)
             .or_insert(vec![])
@@ -116,7 +107,7 @@ impl Graph {
     }
 }
 
-impl fmt::Debug for Graph {
+impl<Arrow: fmt::Debug> fmt::Debug for Graph<Arrow> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut printed_edges = String::new();
 
@@ -135,12 +126,12 @@ impl fmt::Debug for Graph {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct Edge {
-    pub ch: EdgeArrow,
+struct Edge<Arrow> {
+    pub ch: Arrow,
     pub to: Node,
 }
 
-impl fmt::Debug for Edge {
+impl<A: fmt::Debug> fmt::Debug for Edge<A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "-{:?}-> {}", self.ch, self.to)
     }
@@ -151,26 +142,21 @@ type Node = usize;
 #[cfg(test)]
 mod test {
     use super::Graph;
-    use crate::graph::EdgeArrow::*;
     use std::collections::HashMap;
 
     #[test]
     fn add_edge() {
         let mut g = Graph::new(2);
-        g = g.add_edge(0, Char('a'), 1);
+        g = g.add_edge(0, 'a', 1);
         assert_eq!(g.edges, hash(vec![(0, vec![edge('a', 1)])]));
-        g = g.add_edge(0, Char('b'), 2);
+        g = g.add_edge(0, 'b', 2);
         assert_eq!(g.edges, hash(vec![(0, vec![edge('a', 1), edge('b', 2)])]));
     }
 
     #[test]
     fn test_concat() {
-        let g1 = Graph::new(2)
-            .add_edge(0, Char('a'), 1)
-            .add_edge(1, Char('b'), 2);
-        let g2 = Graph::new(2)
-            .add_edge(0, Char('c'), 1)
-            .add_edge(1, Char('d'), 2);
+        let g1 = Graph::new(2).add_edge(0, 'a', 1).add_edge(1, 'b', 2);
+        let g2 = Graph::new(2).add_edge(0, 'c', 1).add_edge(1, 'd', 2);
 
         let expected = Graph {
             node_count: 5,
@@ -188,12 +174,10 @@ mod test {
     #[test]
     fn test_insert() {
         let g1 = Graph::new(3)
-            .add_edge(0, Char('a'), 1)
-            .add_edge(1, Char('b'), 2)
-            .add_edge(2, Char('c'), 3);
-        let g2 = Graph::new(2)
-            .add_edge(0, Char('d'), 1)
-            .add_edge(1, Char('e'), 2);
+            .add_edge(0, 'a', 1)
+            .add_edge(1, 'b', 2)
+            .add_edge(2, 'c', 3);
+        let g2 = Graph::new(2).add_edge(0, 'd', 1).add_edge(1, 'e', 2);
 
         let expected = Graph {
             node_count: 6,
@@ -212,14 +196,14 @@ mod test {
     #[test]
     fn test_attach_parallel() {
         let g1 = Graph::new(4)
-            .add_edge(0, Char('a'), 1)
-            .add_edge(1, Char('b'), 2)
-            .add_edge(2, Char('c'), 3)
-            .add_edge(3, Char('d'), 4);
+            .add_edge(0, 'a', 1)
+            .add_edge(1, 'b', 2)
+            .add_edge(2, 'c', 3)
+            .add_edge(3, 'd', 4);
         let g2 = Graph::new(3)
-            .add_edge(0, Char('e'), 1)
-            .add_edge(1, Char('f'), 2)
-            .add_edge(2, Char('g'), 3);
+            .add_edge(0, 'e', 1)
+            .add_edge(1, 'f', 2)
+            .add_edge(2, 'g', 3);
 
         let expected = Graph {
             node_count: 7,
@@ -236,11 +220,13 @@ mod test {
         assert_eq!(g1.attach_parallel(g2, 1, 3), expected);
     }
 
-    fn edge(ch: char, to: usize) -> super::Edge {
-        super::Edge { ch: Char(ch), to }
+    fn edge(ch: char, to: usize) -> super::Edge<char> {
+        super::Edge { ch, to }
     }
 
-    fn hash(entries: Vec<(usize, Vec<super::Edge>)>) -> HashMap<usize, Vec<super::Edge>> {
+    fn hash(
+        entries: Vec<(usize, Vec<super::Edge<char>>)>,
+    ) -> HashMap<usize, Vec<super::Edge<char>>> {
         entries.iter().cloned().collect()
     }
 }

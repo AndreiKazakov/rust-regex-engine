@@ -1,7 +1,16 @@
 use super::graph::Graph;
-use crate::graph::EdgeArrow::*;
+use NfaArrow::*;
 
-pub type ParseResult = (Graph, usize);
+pub type ParseResult = (Graph<NfaArrow>, usize);
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum NfaArrow {
+    Epsilon,
+    Char(char),
+    Dot,
+    LineStart,
+    LineEnd,
+}
 
 pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
     let mut i = 0;
