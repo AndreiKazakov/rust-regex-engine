@@ -28,7 +28,7 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
             None => break,
             Some(c) if stop_at == Some(c) => {
                 i += step;
-                break;
+                return Ok((graph, i));
             }
             Some(c) if c.is_alphanumeric() => {
                 graph = graph.add_edge(final_node, Char(c), final_node + 1);
@@ -104,7 +104,10 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
         i += step;
     }
 
-    Ok((graph, i))
+    match stop_at {
+        None => Ok((graph, i)),
+        Some(c) => Err(format!("Expected {} got end of line", c)),
+    }
 }
 
 #[cfg(test)]
