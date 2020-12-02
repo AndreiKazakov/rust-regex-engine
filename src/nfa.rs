@@ -146,12 +146,90 @@ fn can_apply_metacharacter(ch: Option<char>) -> bool {
     }
 }
 
+pub fn check(pattern: String, string: String) -> Result<bool, String> {
+    let graph = parse(pattern.as_str(), None)?.0;
+    println!("pattern {}: {:?}", pattern, graph);
+    Ok(walk(graph, string))
+}
+
+fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
+    let mut state = HashSet::new();
+    state.insert(0);
+    state.extend(follow_empty(&nfa, &state));
+
+    for c in text.chars() {
+        if state.contains(&nfa.final_node) {
+            return true;
+        }
+
+        state = step(&nfa, state, c);
+        if state.is_empty() {
+            return false;
+        }
+        state.extend(follow_empty(&nfa, &state));
+    }
+
+    state.contains(&nfa.final_node)
+}
+
+fn step(nfa: &Graph<NfaArrow>, states: HashSet<usize>, c: char) -> HashSet<usize> {
+    let mut new_state = HashSet::new();
+    let mut relevant_edges = HashSet::new();
+
+    for s in states {
+        if let Some(edges) = nfa.edges.get(&s) {
+            relevant_edges.extend(
+                edges
+                    .iter()
+                    .filter(|e| e.ch == Char(c) || e.ch == Dot)
+                    .map(|e| e.to),
+            );
+        }
+    }
+
+    let empty = follow_empty(&nfa, &relevant_edges);
+    new_state.extend(relevant_edges);
+    new_state.extend(empty);
+    new_state
+}
+
+fn follow_empty(nfa: &Graph<NfaArrow>, state: &HashSet<usize>) -> HashSet<usize> {
+    let mut empty = HashSet::new();
+
+    for &s in state {
+        empty.extend(follow_single_empty(&nfa, s, &empty));
+    }
+    empty
+}
+
+fn follow_single_empty(
+    nfa: &Graph<NfaArrow>,
+    state: usize,
+    acc: &HashSet<usize>,
+) -> HashSet<usize> {
+    let mut empty = HashSet::new();
+    let mut new_acc = acc.clone();
+
+    if let Some(edges) = nfa.edges.get(&state) {
+        for e in edges {
+            if e.ch == Epsilon && !new_acc.contains(&e.to) {
+                empty.insert(e.to);
+                new_acc.insert(e.to);
+                empty.extend(follow_single_empty(nfa, e.to, &new_acc));
+            }
+        }
+    }
+
+    empty
+}
+
 #[cfg(test)]
-mod test {
+mod nfa_test {
+    use super::super::test::TEST_CASES;
     use super::*;
 
     #[test]
-    fn parse_test() {
+    fn test_parse() {
         let graph = Graph::new(3)
             .add_edge(0, Dot, 0)
             .add_edge(1, Char('b'), 2)
@@ -171,5 +249,83 @@ mod test {
             Err(e) => panic!("Failed to parse: {}", e),
             Ok(res) => assert_eq!(res, (graph, 17)),
         }
+    }
+
+    #[test]
+    fn test_parse_brackets() {
+        let graph = Graph::new(1)
+            .add_edge(0, Dot, 0)
+            .add_edge(0, Char('b'), 1)
+            .add_edge(0, Char('c'), 1);
+
+        match parse(r"[bc]", None) {
+            Err(e) => panic!("Failed to parse: {}", e),
+            Ok(res) => assert_eq!(res, (graph, 4)),
+        }
+    }
+
+    #[test]
+    fn test_check() {
+        for (pattern, string, expected) in TEST_CASES.iter() {
+            let res = check(pattern.to_string(), string.to_string());
+            match (expected, &res) {
+                (Ok(e), Ok(r)) => assert_eq!(
+                    r, e,
+                    "Testing that pattern {} tested for string {} should be {}",
+                    pattern, string, e
+                ),
+                (Err(_), Err(_)) => (),
+                _ => panic!(
+                    "Expectation failed: {:?} is not equal to {:?} for pattern {} and string {}",
+                    res, expected, pattern, string
+                ),
+            }
+        }
+    }
+
+    #[test]
+    fn test_follow_single_empty() {
+        let graph = Graph::new(3)
+            .add_edge(0, Char('b'), 1)
+            .add_edge(1, Char('c'), 4)
+            .add_edge(2, Char('d'), 3)
+            .add_edge(1, Epsilon, 2)
+            .add_edge(1, Epsilon, 5)
+            .add_edge(2, Epsilon, 1)
+            .add_edge(2, Char('e'), 3)
+            .add_edge(2, Epsilon, 0);
+
+        let mut expected = HashSet::new();
+        expected.extend(vec![0, 2, 5]);
+
+        let mut acc = HashSet::new();
+        acc.insert(1);
+        assert_eq!(expected, follow_single_empty(&graph, 1, &acc));
+    }
+
+    #[test]
+    fn test_step() {
+        let graph = Graph::new(3)
+            .add_edge(0, Dot, 0)
+            .add_edge(0, Char('b'), 1)
+            .add_edge(1, Char('c'), 4)
+            .add_edge(2, Char('d'), 3)
+            .add_edge(1, Epsilon, 2)
+            .add_edge(2, Epsilon, 0)
+            .add_edge(3, Epsilon, 0)
+            .add_edge(4, Char('z'), 5)
+            .add_edge(5, Char('z'), 6)
+            .add_edge(7, Char('u'), 6)
+            .add_edge(7, Epsilon, 9)
+            .add_edge(9, Char('z'), 10)
+            .add_edge(10, Char('u'), 6)
+            .add_edge(5, Epsilon, 8);
+
+        let mut expected = HashSet::new();
+        expected.extend(vec![5, 8]);
+
+        let mut initial_states = HashSet::new();
+        initial_states.extend(vec![1, 3, 4, 7]);
+        assert_eq!(expected, step(&graph, initial_states, 'z'));
     }
 }

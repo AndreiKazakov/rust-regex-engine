@@ -1,6 +1,9 @@
 mod graph;
 mod nfa;
 
+#[cfg(test)]
+mod test;
+
 use std::env;
 
 fn main() -> Result<(), String> {
@@ -8,7 +11,7 @@ fn main() -> Result<(), String> {
 
     if let [_, pattern, string] = args.as_slice() {
         println!("{} - {}", pattern, string);
-        println!("{:?}", nfa::parse(pattern.as_str(), None)?);
+        println!("{:?}", nfa::check(pattern.to_string(), string.to_string()));
     } else {
         println!("Usage: re <pattern> <string>")
     }
