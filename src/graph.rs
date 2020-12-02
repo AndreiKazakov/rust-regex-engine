@@ -5,7 +5,7 @@ use std::fmt;
 /// Basic domain-specific implementation of a graph.
 /// It is assumed that there is only one Initial node (at index 0) and one Final node.
 pub struct Graph<Arrow> {
-    edges: HashMap<Node, Vec<Edge<Arrow>>>,
+    pub edges: HashMap<Node, Vec<Edge<Arrow>>>,
     node_count: usize,
     pub final_node: usize,
 }
@@ -127,7 +127,7 @@ impl<Arrow: fmt::Debug + PartialEq> fmt::Debug for Graph<Arrow> {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-struct Edge<Arrow> {
+pub struct Edge<Arrow> {
     pub ch: Arrow,
     pub to: Node,
 }
