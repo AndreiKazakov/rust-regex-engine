@@ -100,6 +100,18 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
                 loop {
                     match pattern.chars().nth(j) {
                         None => return Err("Unexpected EOL".to_string()),
+                        Some('\\') => {
+                            let c = pattern
+                                .chars()
+                                .nth(j + 1)
+                                .ok_or_else(|| "Unexpected EOL".to_string())?;
+                            graph = graph.add_edge(final_node, Char(c), final_node + 1);
+                            j += 2;
+                        }
+                        Some(']') if j == i + 1 => {
+                            graph = graph.add_edge(final_node, Char(']'), final_node + 1);
+                            j += 1;
+                        }
                         Some(']') => break,
                         Some(option) => {
                             graph = graph.add_edge(final_node, Char(option), final_node + 1);
