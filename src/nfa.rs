@@ -1,10 +1,11 @@
 use super::graph::Graph;
+use std::collections::HashSet;
 use NfaArrow::*;
 
-pub type ParseResult = (Graph<NfaArrow>, usize);
+type ParseResult = (Graph<NfaArrow>, usize);
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub enum NfaArrow {
+enum NfaArrow {
     Epsilon,
     Char(char),
     Dot,
@@ -12,7 +13,7 @@ pub enum NfaArrow {
     LineEnd,
 }
 
-pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
+fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
     let mut i = 0;
     let mut graph = Graph::new(0);
     if stop_at == None {
@@ -29,11 +30,6 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
             Some(c) if stop_at == Some(c) => {
                 i += step;
                 return Ok((graph, i));
-            }
-            Some(c) if c.is_alphanumeric() => {
-                graph = graph.add_edge(final_node, Char(c), final_node + 1);
-                graph.final_node += 1;
-                previous_node = final_node;
             }
             Some('.') => {
                 graph = graph.add_edge(final_node, Dot, final_node + 1);
@@ -126,7 +122,12 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
                 graph.final_node += 1;
                 previous_node = final_node;
             }
-            Some(c) => return Err(format!("unexpected character: {}", c)),
+            Some(')') => return Err("unexpected character: )".to_string()),
+            Some(c) => {
+                graph = graph.add_edge(final_node, Char(c), final_node + 1);
+                graph.final_node += 1;
+                previous_node = final_node;
+            }
         }
 
         i += step;
