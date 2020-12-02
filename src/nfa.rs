@@ -67,12 +67,21 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
                 previous_node = 0;
             }
             Some('?') => {
+                if i == 0 || !can_apply_metacharacter(pattern.chars().nth(i - 1)) {
+                    return Err("Can not apply '?'".to_string());
+                }
                 graph = graph.add_edge(previous_node, Epsilon, final_node);
             }
             Some('+') => {
+                if i == 0 || !can_apply_metacharacter(pattern.chars().nth(i - 1)) {
+                    return Err("Can not apply '+'".to_string());
+                }
                 graph = graph.add_edge(final_node, Epsilon, previous_node);
             }
             Some('*') => {
+                if i == 0 || !can_apply_metacharacter(pattern.chars().nth(i - 1)) {
+                    return Err("Can not apply '*'".to_string());
+                }
                 graph = graph.add_edge(previous_node, Epsilon, final_node);
                 graph = graph.add_edge(final_node, Epsilon, previous_node);
             }
@@ -107,6 +116,13 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
     match stop_at {
         None => Ok((graph, i)),
         Some(c) => Err(format!("Expected {} got end of line", c)),
+    }
+}
+
+fn can_apply_metacharacter(ch: Option<char>) -> bool {
+    match ch {
+        None | Some('*') | Some('+') | Some('?') => false,
+        _ => true,
     }
 }
 
