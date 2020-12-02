@@ -62,8 +62,12 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
             },
             Some('|') => {
                 let right = parse(&pattern[i + 1..], stop_at)?;
-                graph = graph.attach_parallel(right.0, 0, final_node);
-                step += right.1;
+                if right.0.edges.is_empty() {
+                    graph = graph.add_edge(0, Epsilon, final_node)
+                } else {
+                    graph = graph.attach_parallel(right.0, 0, final_node);
+                }
+                step += right.1 - 1;
                 previous_node = 0;
             }
             Some('?') => {
