@@ -10,7 +10,7 @@ pub struct Graph<Arrow> {
     pub final_node: usize,
 }
 
-impl<Arrow> Graph<Arrow> {
+impl<Arrow: PartialEq> Graph<Arrow> {
     pub fn new(final_node: Node) -> Self {
         Self {
             edges: HashMap::new(),
@@ -20,10 +20,11 @@ impl<Arrow> Graph<Arrow> {
     }
 
     pub fn add_edge(mut self, from: Node, ch: Arrow, to: Node) -> Self {
-        self.edges
-            .entry(from)
-            .or_insert(vec![])
-            .push(Edge { ch, to });
+        let edges = self.edges.entry(from).or_insert(vec![]);
+        let edge = Edge { ch, to };
+        if !edges.contains(&edge) {
+            edges.push(edge);
+        }
 
         if from + 1 > self.node_count {
             self.node_count = from + 1;
@@ -107,7 +108,7 @@ impl<Arrow> Graph<Arrow> {
     }
 }
 
-impl<Arrow: fmt::Debug> fmt::Debug for Graph<Arrow> {
+impl<Arrow: fmt::Debug + PartialEq> fmt::Debug for Graph<Arrow> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut printed_edges = String::new();
 
