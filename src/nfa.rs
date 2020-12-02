@@ -119,7 +119,10 @@ pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String
                         }
                     }
                 }
-                step = j;
+                if j == i + 1 {
+                    return Err("Empty character class".to_string());
+                }
+                step += j - i;
                 graph.final_node += 1;
                 previous_node = final_node;
             }
