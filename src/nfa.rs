@@ -15,6 +15,9 @@ pub enum NfaArrow {
 pub fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
     let mut i = 0;
     let mut graph = Graph::new(0);
+    if stop_at == None {
+        graph = graph.add_edge(0, Dot, 0);
+    }
     let mut previous_node = 0;
 
     loop {
@@ -111,6 +114,7 @@ mod test {
     #[test]
     fn parse_test() {
         let graph = Graph::new(3)
+            .add_edge(0, Dot, 0)
             .add_edge(1, Char('b'), 2)
             .add_edge(1, Char('c'), 2)
             .add_edge(1, Char('d'), 2)
