@@ -2,6 +2,12 @@ use super::graph::{Edge, Graph};
 use std::collections::HashSet;
 use NfaArrow::*;
 
+pub fn check(pattern: String, string: String) -> Result<bool, String> {
+    let graph = parse(pattern.as_str(), None)?.0;
+    println!("pattern {}: {:?}", pattern, graph);
+    Ok(walk(graph, string))
+}
+
 type ParseResult = (Graph<NfaArrow>, usize);
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -144,12 +150,6 @@ fn can_apply_metacharacter(ch: Option<char>) -> bool {
         None | Some('*') | Some('+') | Some('?') => false,
         _ => true,
     }
-}
-
-pub fn check(pattern: String, string: String) -> Result<bool, String> {
-    let graph = parse(pattern.as_str(), None)?.0;
-    println!("pattern {}: {:?}", pattern, graph);
-    Ok(walk(graph, string))
 }
 
 fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
