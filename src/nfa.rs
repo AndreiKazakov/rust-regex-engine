@@ -7,7 +7,9 @@ pub fn check(pattern: String, string: String) -> Result<bool, String> {
     Ok(walk(graph, string))
 }
 
-type ParseResult = (Graph<NfaArrow>, usize);
+type NFA = Graph<NfaArrow>;
+type NFAState = HashSet<usize>;
+type ParseResult = (NFA, usize);
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 enum NfaArrow {
@@ -171,7 +173,7 @@ fn can_apply_metacharacter(ch: Option<char>) -> bool {
     }
 }
 
-fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
+fn walk(nfa: NFA, text: String) -> bool {
     let mut state = HashSet::new();
     state.insert(0);
     state.extend(step(&nfa, &state, |e| e.ch == LineStart));
@@ -203,11 +205,7 @@ fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
     state.contains(&nfa.final_node)
 }
 
-fn step<F: Fn(&&Edge<NfaArrow>) -> bool>(
-    nfa: &Graph<NfaArrow>,
-    states: &HashSet<usize>,
-    predicate: F,
-) -> HashSet<usize> {
+fn step<F: Fn(&&Edge<NfaArrow>) -> bool>(nfa: &NFA, states: &NFAState, predicate: F) -> NFAState {
     let mut relevant_edges = HashSet::new();
 
     for s in states {
@@ -219,7 +217,7 @@ fn step<F: Fn(&&Edge<NfaArrow>) -> bool>(
     relevant_edges
 }
 
-fn follow_empty(nfa: &Graph<NfaArrow>, mut state: HashSet<usize>) -> HashSet<usize> {
+fn follow_empty(nfa: &NFA, mut state: NFAState) -> NFAState {
     loop {
         let empty = step(&nfa, &state, |e| e.ch == Epsilon);
         let diff: HashSet<_> = empty.difference(&state).collect();
