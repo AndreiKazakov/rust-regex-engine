@@ -1,4 +1,4 @@
-pub const TEST_CASES: [(&str, &str, Result<bool, &str>); 107] = [
+pub const TEST_CASES: [(&str, &str, Result<bool, &str>); 117] = [
     (
         "(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)9",
         "abcdefghijkl9",
@@ -38,6 +38,7 @@ pub const TEST_CASES: [(&str, &str, Result<bool, &str>); 107] = [
     ("a.*c", "axyzd", Ok(false)),
     ("a[bc]d", "abc", Ok(false)),
     ("a[bc]d", "abd", Ok(true)),
+    ("a[\\-b]", "a-", Ok(true)),
     ("a[]b", "-", Err("")),
     ("a[", "-", Err("")),
     ("a\\", "-", Err("")),
@@ -46,6 +47,10 @@ pub const TEST_CASES: [(&str, &str, Result<bool, &str>); 107] = [
     ("a]", "a]", Ok(true)),
     ("a[]]b", "a]b", Ok(true)),
     ("a[\\]]b", "a]b", Ok(true)),
+    ("a[^bc]d", "aed", Ok(true)),
+    ("a[^bc]d", "abd", Ok(false)),
+    ("a[^]b]c", "a]c", Ok(false)),
+    ("a[^]b]c", "adc", Ok(true)),
     ("ab|cd", "abc", Ok(true)),
     ("ab|cd", "abcd", Ok(true)),
     ("()ef", "def", Ok(true)),
@@ -61,6 +66,7 @@ pub const TEST_CASES: [(&str, &str, Result<bool, &str>); 107] = [
     ("(a+|b)+", "ab", Ok(true)),
     ("(a+|b)?", "ab", Ok(true)),
     (")(", "-", Err("")),
+    ("[^ab]*", "cde", Ok(true)),
     ("abc", "", Ok(false)),
     ("a*", "", Ok(true)),
     ("a|b|c|d|e", "e", Ok(true)),
@@ -98,6 +104,18 @@ pub const TEST_CASES: [(&str, &str, Result<bool, &str>); 107] = [
     ("(a)(b)c|ab", "ab", Ok(true)),
     ("(a)+x", "aaax", Ok(true)),
     ("([ac])+x", "aacx", Ok(true)),
+    (
+        "([^/]*/)*sub1/",
+        "d:msgs/tdir/sub1/trial/away.cpp",
+        Ok(true),
+    ),
+    (
+        "([^.]*)\\.([^:]*):[T ]+(.*)",
+        "track1.title:TBlah blah blah",
+        Ok(true),
+    ),
+    ("([^N]*N)+", "abNNxyzN", Ok(true)),
+    ("([^N]*N)+", "abNNxyz", Ok(true)),
     ("([abc]*)x", "abcx", Ok(true)),
     ("([abc]*)x", "abc", Ok(false)),
     ("([xyz]*)x", "abcx", Ok(true)),

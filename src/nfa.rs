@@ -14,6 +14,7 @@ enum NfaArrow {
     Epsilon,
     Char(char),
     OneOf(Vec<char>),
+    NotOneOf(Vec<char>),
     Dot,
     LineStart,
     LineEnd,
@@ -100,6 +101,8 @@ fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
             Some('[') => {
                 let mut j = i + 1;
                 let mut chars = Vec::new();
+                let mut exclusive = false;
+
                 loop {
                     match pattern.chars().nth(j) {
                         None => return Err("Unexpected EOL".to_string()),
@@ -111,7 +114,11 @@ fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
                             chars.push(c);
                             j += 2;
                         }
-                        Some(']') if j == i + 1 => {
+                        Some('^') if j == i + 1 => {
+                            exclusive = true;
+                            j += 1;
+                        }
+                        Some(']') if j == i + 1 || (exclusive && j == i + 2) => {
                             chars.push(']');
                             j += 1;
                         }
@@ -122,10 +129,20 @@ fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
                         }
                     }
                 }
+
                 if j == i + 1 {
                     return Err("Empty character class".to_string());
                 }
-                graph = graph.add_edge(final_node, OneOf(chars), final_node + 1);
+
+                graph = graph.add_edge(
+                    final_node,
+                    if exclusive {
+                        NotOneOf(chars)
+                    } else {
+                        OneOf(chars)
+                    },
+                    final_node + 1,
+                );
                 step += j - i;
                 graph.final_node += 1;
                 previous_node = final_node;
@@ -169,6 +186,7 @@ fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
             Char(ch) => c == *ch,
             Dot => true,
             OneOf(chars) => chars.contains(&c),
+            NotOneOf(chars) => !chars.contains(&c),
             _ => false,
         });
         if state.is_empty() {
