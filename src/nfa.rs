@@ -174,7 +174,7 @@ fn can_apply_metacharacter(ch: Option<char>) -> bool {
 fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
     let mut state = HashSet::new();
     state.insert(0);
-    state.extend(step(&nfa, &state, &|e| e.ch == LineStart));
+    state.extend(step(&nfa, &state, |e| e.ch == LineStart));
     state = follow_empty(&nfa, state);
 
     for (i, c) in text.chars().enumerate() {
@@ -182,7 +182,7 @@ fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
             return true;
         }
 
-        state = step(&nfa, &state, &|e| match &e.ch {
+        state = step(&nfa, &state, |e| match &e.ch {
             Char(ch) => c == *ch,
             Dot => true,
             OneOf(chars) => chars.contains(&c),
@@ -194,7 +194,7 @@ fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
         }
 
         if i == text.len() - 1 {
-            state.extend(step(&nfa, &state, &|e| e.ch == LineEnd));
+            state.extend(step(&nfa, &state, |e| e.ch == LineEnd));
         }
 
         state = follow_empty(&nfa, state);
@@ -203,16 +203,16 @@ fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
     state.contains(&nfa.final_node)
 }
 
-fn step(
+fn step<F: Fn(&&Edge<NfaArrow>) -> bool>(
     nfa: &Graph<NfaArrow>,
     states: &HashSet<usize>,
-    predicate: &dyn Fn(&&Edge<NfaArrow>) -> bool,
+    predicate: F,
 ) -> HashSet<usize> {
     let mut relevant_edges = HashSet::new();
 
     for s in states {
         if let Some(edges) = nfa.edges.get(&s) {
-            relevant_edges.extend(edges.iter().filter(predicate).map(|e| e.to));
+            relevant_edges.extend(edges.iter().filter(&predicate).map(|e| e.to));
         }
     }
 
@@ -221,7 +221,7 @@ fn step(
 
 fn follow_empty(nfa: &Graph<NfaArrow>, mut state: HashSet<usize>) -> HashSet<usize> {
     loop {
-        let empty = step(&nfa, &state, &|e| e.ch == Epsilon);
+        let empty = step(&nfa, &state, |e| e.ch == Epsilon);
         let diff: HashSet<_> = empty.difference(&state).collect();
         if diff.is_empty() {
             break;
@@ -334,7 +334,7 @@ mod nfa_test {
         initial_states.extend(vec![1, 3, 4, 7]);
         assert_eq!(
             expected,
-            step(&graph, &initial_states, &|e| e.ch == Char('z'))
+            step(&graph, &initial_states, |e| e.ch == Char('z'))
         );
     }
 }
