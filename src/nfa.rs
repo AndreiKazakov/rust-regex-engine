@@ -4,7 +4,6 @@ use NfaArrow::*;
 
 pub fn check(pattern: String, string: String) -> Result<bool, String> {
     let graph = parse(pattern.as_str(), None)?.0;
-    println!("pattern {}: {:?}", pattern, graph);
     Ok(walk(graph, string))
 }
 
