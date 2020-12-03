@@ -179,7 +179,6 @@ fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
 }
 
 fn step(nfa: &Graph<NfaArrow>, states: HashSet<usize>, c: char) -> HashSet<usize> {
-    let mut new_state = HashSet::new();
     let mut relevant_edges = HashSet::new();
 
     for s in states {
@@ -193,10 +192,7 @@ fn step(nfa: &Graph<NfaArrow>, states: HashSet<usize>, c: char) -> HashSet<usize
         }
     }
 
-    let empty = follow_empty(&nfa, &relevant_edges);
-    new_state.extend(relevant_edges);
-    new_state.extend(empty);
-    new_state
+    relevant_edges
 }
 
 fn follow(nfa: &Graph<NfaArrow>, state: &HashSet<usize>, arrow: NfaArrow) -> HashSet<usize> {
@@ -344,7 +340,7 @@ mod nfa_test {
             .add_edge(5, Epsilon, 8);
 
         let mut expected = HashSet::new();
-        expected.extend(vec![5, 8]);
+        expected.extend(vec![5]);
 
         let mut initial_states = HashSet::new();
         initial_states.extend(vec![1, 3, 4, 7]);
