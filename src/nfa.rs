@@ -155,9 +155,10 @@ pub fn check(pattern: String, string: String) -> Result<bool, String> {
 fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
     let mut state = HashSet::new();
     state.insert(0);
+    state.extend(follow(&nfa, &state, LineStart));
     state.extend(follow_empty(&nfa, &state));
 
-    for c in text.chars() {
+    for (i, c) in text.chars().enumerate() {
         if state.contains(&nfa.final_node) {
             return true;
         }
@@ -166,6 +167,11 @@ fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
         if state.is_empty() {
             return false;
         }
+
+        if i == text.len() - 1 {
+            state.extend(follow(&nfa, &state, LineEnd));
+        }
+
         state.extend(follow_empty(&nfa, &state));
     }
 
@@ -191,6 +197,22 @@ fn step(nfa: &Graph<NfaArrow>, states: HashSet<usize>, c: char) -> HashSet<usize
     new_state.extend(relevant_edges);
     new_state.extend(empty);
     new_state
+}
+
+fn follow(nfa: &Graph<NfaArrow>, state: &HashSet<usize>, arrow: NfaArrow) -> HashSet<usize> {
+    let mut matches = HashSet::new();
+
+    for s in state {
+        if let Some(edges) = nfa.edges.get(s) {
+            for e in edges {
+                if e.ch == arrow {
+                    matches.insert(e.to);
+                }
+            }
+        }
+    }
+
+    matches
 }
 
 fn follow_empty(nfa: &Graph<NfaArrow>, state: &HashSet<usize>) -> HashSet<usize> {
