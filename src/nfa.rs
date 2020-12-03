@@ -1,4 +1,4 @@
-use super::graph::Graph;
+use super::graph::{Edge, Graph};
 use std::collections::HashSet;
 use NfaArrow::*;
 
@@ -155,90 +155,56 @@ pub fn check(pattern: String, string: String) -> Result<bool, String> {
 fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
     let mut state = HashSet::new();
     state.insert(0);
-    state.extend(follow(&nfa, &state, LineStart));
-    state.extend(follow_empty(&nfa, &state));
+    state.extend(step(&nfa, &state, &|e| e.ch == LineStart));
+    state = follow_empty(&nfa, state);
 
     for (i, c) in text.chars().enumerate() {
         if state.contains(&nfa.final_node) {
             return true;
         }
 
-        state = step(&nfa, state, c);
+        state = step(&nfa, &state, &|e| e.ch == Char(c) || e.ch == Dot);
         if state.is_empty() {
             return false;
         }
 
         if i == text.len() - 1 {
-            state.extend(follow(&nfa, &state, LineEnd));
+            state.extend(step(&nfa, &state, &|e| e.ch == LineEnd));
         }
 
-        state.extend(follow_empty(&nfa, &state));
+        state = follow_empty(&nfa, state);
     }
 
     state.contains(&nfa.final_node)
 }
 
-fn step(nfa: &Graph<NfaArrow>, states: HashSet<usize>, c: char) -> HashSet<usize> {
+fn step(
+    nfa: &Graph<NfaArrow>,
+    states: &HashSet<usize>,
+    predicate: &dyn Fn(&&Edge<NfaArrow>) -> bool,
+) -> HashSet<usize> {
     let mut relevant_edges = HashSet::new();
 
     for s in states {
         if let Some(edges) = nfa.edges.get(&s) {
-            relevant_edges.extend(
-                edges
-                    .iter()
-                    .filter(|e| e.ch == Char(c) || e.ch == Dot)
-                    .map(|e| e.to),
-            );
+            relevant_edges.extend(edges.iter().filter(predicate).map(|e| e.to));
         }
     }
 
     relevant_edges
 }
 
-fn follow(nfa: &Graph<NfaArrow>, state: &HashSet<usize>, arrow: NfaArrow) -> HashSet<usize> {
-    let mut matches = HashSet::new();
-
-    for s in state {
-        if let Some(edges) = nfa.edges.get(s) {
-            for e in edges {
-                if e.ch == arrow {
-                    matches.insert(e.to);
-                }
-            }
+fn follow_empty(nfa: &Graph<NfaArrow>, mut state: HashSet<usize>) -> HashSet<usize> {
+    loop {
+        let empty = step(&nfa, &state, &|e| e.ch == Epsilon);
+        let diff: HashSet<_> = empty.difference(&state).collect();
+        if diff.is_empty() {
+            break;
         }
+        state.extend(empty)
     }
 
-    matches
-}
-
-fn follow_empty(nfa: &Graph<NfaArrow>, state: &HashSet<usize>) -> HashSet<usize> {
-    let mut empty = HashSet::new();
-
-    for &s in state {
-        empty.extend(follow_single_empty(&nfa, s, &empty));
-    }
-    empty
-}
-
-fn follow_single_empty(
-    nfa: &Graph<NfaArrow>,
-    state: usize,
-    acc: &HashSet<usize>,
-) -> HashSet<usize> {
-    let mut empty = HashSet::new();
-    let mut new_acc = acc.clone();
-
-    if let Some(edges) = nfa.edges.get(&state) {
-        for e in edges {
-            if e.ch == Epsilon && !new_acc.contains(&e.to) {
-                empty.insert(e.to);
-                new_acc.insert(e.to);
-                empty.extend(follow_single_empty(nfa, e.to, &new_acc));
-            }
-        }
-    }
-
-    empty
+    state
 }
 
 #[cfg(test)]
@@ -302,7 +268,7 @@ mod nfa_test {
     }
 
     #[test]
-    fn test_follow_single_empty() {
+    fn test_follow_empty() {
         let graph = Graph::new(3)
             .add_edge(0, Char('b'), 1)
             .add_edge(1, Char('c'), 4)
@@ -314,11 +280,11 @@ mod nfa_test {
             .add_edge(2, Epsilon, 0);
 
         let mut expected = HashSet::new();
-        expected.extend(vec![0, 2, 5]);
+        expected.extend(vec![0, 2, 5, 1]);
 
-        let mut acc = HashSet::new();
-        acc.insert(1);
-        assert_eq!(expected, follow_single_empty(&graph, 1, &acc));
+        let mut state = HashSet::new();
+        state.insert(1);
+        assert_eq!(expected, follow_empty(&graph, state));
     }
 
     #[test]
@@ -344,6 +310,9 @@ mod nfa_test {
 
         let mut initial_states = HashSet::new();
         initial_states.extend(vec![1, 3, 4, 7]);
-        assert_eq!(expected, step(&graph, initial_states, 'z'));
+        assert_eq!(
+            expected,
+            step(&graph, &initial_states, &|e| e.ch == Char('z'))
+        );
     }
 }
