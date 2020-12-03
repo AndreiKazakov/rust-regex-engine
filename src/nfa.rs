@@ -101,51 +101,9 @@ fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
                 previous_node = final_node;
             }
             Some('[') => {
-                let mut j = i + 1;
-                let mut chars = Vec::new();
-                let mut exclusive = false;
-
-                loop {
-                    match pattern.chars().nth(j) {
-                        None => return Err("Unexpected EOL".to_string()),
-                        Some('\\') => {
-                            let c = pattern
-                                .chars()
-                                .nth(j + 1)
-                                .ok_or_else(|| "Unexpected EOL".to_string())?;
-                            chars.push(c);
-                            j += 2;
-                        }
-                        Some('^') if j == i + 1 => {
-                            exclusive = true;
-                            j += 1;
-                        }
-                        Some(']') if j == i + 1 || (exclusive && j == i + 2) => {
-                            chars.push(']');
-                            j += 1;
-                        }
-                        Some(']') => break,
-                        Some(option) => {
-                            chars.push(option);
-                            j += 1;
-                        }
-                    }
-                }
-
-                if j == i + 1 {
-                    return Err("Empty character class".to_string());
-                }
-
-                graph = graph.add_edge(
-                    final_node,
-                    if exclusive {
-                        NotOneOf(chars)
-                    } else {
-                        OneOf(chars)
-                    },
-                    final_node + 1,
-                );
-                step += j - i;
+                let (char_class, len) = parse_character_class(&pattern[i + 1..])?;
+                graph = graph.add_edge(final_node, char_class, final_node + 1);
+                step += len;
                 graph.final_node += 1;
                 previous_node = final_node;
             }
@@ -164,6 +122,43 @@ fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
         None => Ok((graph, i)),
         Some(c) => Err(format!("Expected {} got end of line", c)),
     }
+}
+
+fn parse_character_class(char_class: &str) -> Result<(NfaArrow, usize), String> {
+    let mut j = 0;
+    let mut chars = Vec::new();
+    let mut exclusive = false;
+
+    loop {
+        match char_class.chars().nth(j) {
+            None => return Err("Unexpected EOL".to_string()),
+            Some('\\') => {
+                let c = char_class
+                    .chars()
+                    .nth(j + 1)
+                    .ok_or_else(|| "Unexpected EOL".to_string())?;
+                chars.push(c);
+                j += 1;
+            }
+            Some('^') if j == 0 => exclusive = true,
+            Some(']') if j == 0 || (exclusive && j == 1) => chars.push(']'),
+            Some(']') => break,
+            Some(option) => chars.push(option),
+        }
+        j += 1;
+    }
+
+    if chars.is_empty() {
+        return Err("Empty character class".to_string());
+    }
+    Ok((
+        if exclusive {
+            NotOneOf(chars)
+        } else {
+            OneOf(chars)
+        },
+        j + 1,
+    ))
 }
 
 fn can_apply_metacharacter(ch: Option<char>) -> bool {
