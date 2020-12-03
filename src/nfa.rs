@@ -13,6 +13,7 @@ type ParseResult = (Graph<NfaArrow>, usize);
 enum NfaArrow {
     Epsilon,
     Char(char),
+    OneOf(Vec<char>),
     Dot,
     LineStart,
     LineEnd,
@@ -98,6 +99,7 @@ fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
             }
             Some('[') => {
                 let mut j = i + 1;
+                let mut chars = Vec::new();
                 loop {
                     match pattern.chars().nth(j) {
                         None => return Err("Unexpected EOL".to_string()),
@@ -106,16 +108,16 @@ fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
                                 .chars()
                                 .nth(j + 1)
                                 .ok_or_else(|| "Unexpected EOL".to_string())?;
-                            graph = graph.add_edge(final_node, Char(c), final_node + 1);
+                            chars.push(c);
                             j += 2;
                         }
                         Some(']') if j == i + 1 => {
-                            graph = graph.add_edge(final_node, Char(']'), final_node + 1);
+                            chars.push(']');
                             j += 1;
                         }
                         Some(']') => break,
                         Some(option) => {
-                            graph = graph.add_edge(final_node, Char(option), final_node + 1);
+                            chars.push(option);
                             j += 1;
                         }
                     }
@@ -123,6 +125,7 @@ fn parse(pattern: &str, stop_at: Option<char>) -> Result<ParseResult, String> {
                 if j == i + 1 {
                     return Err("Empty character class".to_string());
                 }
+                graph = graph.add_edge(final_node, OneOf(chars), final_node + 1);
                 step += j - i;
                 graph.final_node += 1;
                 previous_node = final_node;
@@ -162,7 +165,12 @@ fn walk(nfa: Graph<NfaArrow>, text: String) -> bool {
             return true;
         }
 
-        state = step(&nfa, &state, &|e| e.ch == Char(c) || e.ch == Dot);
+        state = step(&nfa, &state, &|e| match &e.ch {
+            Char(ch) => c == *ch,
+            Dot => true,
+            OneOf(chars) => chars.contains(&c),
+            _ => false,
+        });
         if state.is_empty() {
             return false;
         }
@@ -215,9 +223,7 @@ mod nfa_test {
     fn test_parse() {
         let graph = Graph::new(3)
             .add_edge(0, Dot, 0)
-            .add_edge(1, Char('b'), 2)
-            .add_edge(1, Char('c'), 2)
-            .add_edge(1, Char('d'), 2)
+            .add_edge(1, OneOf(vec!['b', 'c', 'd']), 2)
             .add_edge(2, Epsilon, 1)
             .add_edge(2, Char('e'), 3)
             .add_edge(5, Char('\\'), 3)
@@ -238,8 +244,7 @@ mod nfa_test {
     fn test_parse_brackets() {
         let graph = Graph::new(1)
             .add_edge(0, Dot, 0)
-            .add_edge(0, Char('b'), 1)
-            .add_edge(0, Char('c'), 1);
+            .add_edge(0, OneOf(vec!['b', 'c']), 1);
 
         match parse(r"[bc]", None) {
             Err(e) => panic!("Failed to parse: {}", e),
