@@ -227,8 +227,14 @@ fn follow_empty(nfa: &NFA, mut state: NFAState) -> NFAState {
 
 #[cfg(test)]
 mod nfa_test {
-    use super::super::test::TEST_CASES;
     use super::*;
+    use crate::regex_tests;
+
+    fn check_for_pattern(pattern: &str, string: &str) -> Result<bool, String> {
+        check(pattern.to_string(), string.to_string())
+    }
+
+    regex_tests!(check_for_pattern);
 
     #[test]
     fn test_parse() {
@@ -260,25 +266,6 @@ mod nfa_test {
         match parse(r"[bc]", None) {
             Err(e) => panic!("Failed to parse: {}", e),
             Ok(res) => assert_eq!(res, (graph, 4)),
-        }
-    }
-
-    #[test]
-    fn test_check() {
-        for (pattern, string, expected) in TEST_CASES.iter() {
-            let res = check(pattern.to_string(), string.to_string());
-            match (expected, &res) {
-                (Ok(e), Ok(r)) => assert_eq!(
-                    r, e,
-                    "Testing that pattern {} tested for string {} should be {}",
-                    pattern, string, e
-                ),
-                (Err(_), Err(_)) => (),
-                _ => panic!(
-                    "Expectation failed: {:?} is not equal to {:?} for pattern {} and string {}",
-                    res, expected, pattern, string
-                ),
-            }
         }
     }
 
