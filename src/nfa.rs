@@ -168,39 +168,44 @@ fn can_apply_metacharacter(ch: Option<char>) -> bool {
     }
 }
 
-fn walk(nfa: NFA, text: String) -> bool {
+pub fn initial_state(nfa: &NFA) -> NFAState {
     let mut state = HashSet::new();
     state.insert(0);
     state.extend(step(&nfa, &state, |e| e.ch == LineStart));
-    state = follow_empty(&nfa, state);
+    follow_empty(&nfa, state)
+}
+
+fn walk(nfa: NFA, text: String) -> bool {
+    let mut state = initial_state(&nfa);
 
     for (i, c) in text.chars().enumerate() {
         if state.contains(&nfa.final_node) {
             return true;
         }
 
-        state = step(&nfa, &state, |e| match &e.ch {
-            Char(ch) => c == *ch,
-            Dot => true,
-            OneOf(chars) => chars.contains(&c),
-            NotOneOf(chars) => !chars.contains(&c),
-            _ => false,
-        });
+        state = follow_char(&nfa, &state, c, i == text.len() - 1);
+
         if state.is_empty() {
             return false;
         }
-
-        if i == text.len() - 1 {
-            state.extend(step(&nfa, &state, |e| e.ch == LineEnd));
-        }
-
-        state = follow_empty(&nfa, state);
     }
 
     state.contains(&nfa.final_node)
 }
 
-fn step<F: Fn(&&Edge<NfaArrow>) -> bool>(nfa: &NFA, states: &NFAState, predicate: F) -> NFAState {
+pub fn follow_char(nfa: &NFA, state: &NFAState, c: char, is_last: bool) -> NFAState {
+    let mut new_state = step_with_char(&nfa, &state, c);
+    if is_last {
+        new_state.extend(step_with_line_end(&nfa, &new_state));
+    }
+    follow_empty(&nfa, new_state)
+}
+
+pub fn step<F: Fn(&&Edge<NfaArrow>) -> bool>(
+    nfa: &NFA,
+    states: &NFAState,
+    predicate: F,
+) -> NFAState {
     let mut relevant_edges = HashSet::new();
 
     for s in states {
@@ -210,6 +215,20 @@ fn step<F: Fn(&&Edge<NfaArrow>) -> bool>(nfa: &NFA, states: &NFAState, predicate
     }
 
     relevant_edges
+}
+
+fn step_with_line_end(nfa: &NFA, state: &NFAState) -> NFAState {
+    step(&nfa, &state, |e| e.ch == LineEnd)
+}
+
+fn step_with_char(nfa: &NFA, state: &NFAState, c: char) -> NFAState {
+    step(nfa, state, |e| match &e.ch {
+        Char(ch) => c == *ch,
+        Dot => true,
+        OneOf(chars) => chars.contains(&c),
+        NotOneOf(chars) => !chars.contains(&c),
+        _ => false,
+    })
 }
 
 fn follow_empty(nfa: &NFA, mut state: NFAState) -> NFAState {
