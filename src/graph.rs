@@ -81,31 +81,6 @@ impl<Arrow: PartialEq> Graph<Arrow> {
 
         graph
     }
-
-    pub fn insert(self, other: Self, at: Node) -> Self {
-        let offset = self.node_count;
-        let mut graph = self;
-
-        for (_, edges) in graph.edges.iter_mut() {
-            for e in edges.iter_mut() {
-                if e.to == at {
-                    e.to = offset;
-                }
-            }
-        }
-
-        for (other_from, edges) in other.edges {
-            for e in edges {
-                let edge_to = match e.to {
-                    f if f == other.final_node => at,
-                    f => f + offset,
-                };
-                graph = graph.add_edge(other_from + offset, e.ch, edge_to);
-            }
-        }
-
-        graph
-    }
 }
 
 impl<Arrow: fmt::Debug + PartialEq> fmt::Debug for Graph<Arrow> {
@@ -170,28 +145,6 @@ mod test {
             ]),
         };
         assert_eq!(g1.concat(g2), expected);
-    }
-
-    #[test]
-    fn test_insert() {
-        let g1 = Graph::new(3)
-            .add_edge(0, 'a', 1)
-            .add_edge(1, 'b', 2)
-            .add_edge(2, 'c', 3);
-        let g2 = Graph::new(2).add_edge(0, 'd', 1).add_edge(1, 'e', 2);
-
-        let expected = Graph {
-            node_count: 6,
-            final_node: 3,
-            edges: hash(vec![
-                (0, vec![edge('a', 1)]),
-                (1, vec![edge('b', 4)]),
-                (5, vec![edge('e', 2)]),
-                (2, vec![edge('c', 3)]),
-                (4, vec![edge('d', 5)]),
-            ]),
-        };
-        assert_eq!(g1.insert(g2, 2), expected);
     }
 
     #[test]
