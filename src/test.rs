@@ -9,7 +9,7 @@ macro_rules! generate_regex_test {
             match (expected, &res) {
                 (Ok(e), Ok(r)) => assert_eq!(
                     *r, e,
-                    "Testing that pattern {} tested for string {} should be {}",
+                    "Testing that /{}/ tested for \"{}\" should be {}",
                     $pattern, $string, e
                 ),
                 (Err(_), Err(_)) => (),
