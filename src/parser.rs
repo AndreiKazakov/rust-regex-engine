@@ -56,8 +56,7 @@ fn parse_inner(pattern: &str, stop_at: Option<char>) -> Result<(NFA, usize), Str
                 } else {
                     graph = graph.attach_parallel(right.0, 0, final_node);
                 }
-                step += right.1 - 1;
-                previous_node = 0;
+                return Ok((graph, i + step + right.1));
             }
             Some('?') => {
                 if i == 0 || !can_apply_metacharacter(pattern.chars().nth(i - 1)) {

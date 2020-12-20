@@ -26,6 +26,7 @@ macro_rules! generate_regex_test {
 #[macro_export]
 macro_rules! regex_tests {
     ($fn_name:ident) => {
+        $crate::generate_regex_test!(test0, $fn_name, "cc|a*x", "z", Ok(false));
         $crate::generate_regex_test!(
             test1,
             $fn_name,
