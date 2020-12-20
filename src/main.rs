@@ -1,3 +1,4 @@
+mod dfa;
 mod graph;
 mod nfa;
 mod parser;
@@ -5,7 +6,7 @@ mod parser;
 #[cfg(test)]
 mod test;
 
-use crate::nfa::walk;
+use crate::dfa::DFA;
 use std::env;
 
 fn main() -> Result<(), String> {
@@ -13,7 +14,7 @@ fn main() -> Result<(), String> {
 
     if let [_, pattern, string] = args.as_slice() {
         let graph = parser::parse(pattern.as_str())?;
-        println!("{:?}", walk(graph, string.to_owned()));
+        println!("{:?}", DFA::new(graph).walk(string.to_owned()));
     } else {
         println!("Usage: re <pattern> <string>")
     }

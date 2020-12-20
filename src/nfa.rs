@@ -3,8 +3,8 @@ use super::graph::{Edge, Graph};
 use std::collections::HashSet;
 use NfaArrow::*;
 
-type NFA = Graph<NfaArrow>;
-type NFAState = HashSet<usize>;
+pub type NFA = Graph<NfaArrow>;
+pub type NFAState = HashSet<usize>;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub enum NfaArrow {
